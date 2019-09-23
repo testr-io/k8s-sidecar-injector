@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/golang/glog"
@@ -452,6 +453,7 @@ func createPatch(pod *corev1.Pod, inj *config.InjectionConfig, annotations map[s
 // main mutation process
 func (whsvr *WebhookServer) mutate(req *v1beta1.AdmissionRequest) *v1beta1.AdmissionResponse {
 	var pod corev1.Pod
+
 	if err := json.Unmarshal(req.Object.Raw, &pod); err != nil {
 		glog.Errorf("Could not unmarshal raw object: %v", err)
 		injectionCounter.With(prometheus.Labels{"status": "error", "reason": "unmarshal_error", "requested": ""}).Inc()
@@ -486,6 +488,13 @@ func (whsvr *WebhookServer) mutate(req *v1beta1.AdmissionRequest) *v1beta1.Admis
 		}
 	}
 
+	containerPorts := extractContainerPortsFromPod(pod)
+	envVar := new(corev1.EnvVar)
+	envVar.Name = "APP_PORTS"
+	envVar.Value = strings.Join(containerPorts, ",")
+
+	injectionConfig.Environment = append(injectionConfig.Environment, *envVar)
+
 	// Workaround: https://github.com/kubernetes/kubernetes/issues/57982
 	applyDefaultsWorkaround(injectionConfig.Containers, injectionConfig.Volumes)
 	annotations := map[string]string{}
@@ -510,6 +519,16 @@ func (whsvr *WebhookServer) mutate(req *v1beta1.AdmissionRequest) *v1beta1.Admis
 			return &pt
 		}(),
 	}
+}
+
+func extractContainerPortsFromPod(pod corev1.Pod) []string {
+	var ports []string
+	for _, container := range pod.Spec.Containers {
+		for _, containerPort := range container.Ports {
+			ports = append(ports, strconv.Itoa(int(containerPort.ContainerPort)))
+		}
+	}
+	return ports
 }
 
 // MetricsHandler method for webhook server
