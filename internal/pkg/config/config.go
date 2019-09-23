@@ -35,6 +35,7 @@ type InjectionConfig struct {
 	VolumeMounts   []corev1.VolumeMount `json:"volumeMounts"`
 	HostAliases    []corev1.HostAlias   `json:"hostAliases"`
 	InitContainers []corev1.Container   `json:"initContainers"`
+	Labels         map[string]string    `json:"labels"`
 }
 
 // Config is a struct indicating how a given injection should be configured

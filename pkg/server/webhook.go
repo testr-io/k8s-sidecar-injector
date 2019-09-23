@@ -395,6 +395,28 @@ func updateAnnotations(target map[string]string, added map[string]string) (patch
 	return patch
 }
 
+func updateLabels(target map[string]string, added map[string]string) (patch []patchOperation) {
+	for key, value := range added {
+		keyEscaped := strings.Replace(key, "/", "~1", -1)
+
+		if target == nil || target[key] == "" {
+			target = map[string]string{}
+			patch = append(patch, patchOperation{
+				Op:    "add",
+				Path:  "/metadata/labels/" + keyEscaped,
+				Value: value,
+			})
+		} else {
+			patch = append(patch, patchOperation{
+				Op:    "replace",
+				Path:  "/metadata/labels/" + keyEscaped,
+				Value: value,
+			})
+		}
+	}
+	return patch
+}
+
 // create mutation patch for resoures
 func createPatch(pod *corev1.Pod, inj *config.InjectionConfig, annotations map[string]string) ([]byte, error) {
 	var patch []patchOperation
@@ -421,8 +443,9 @@ func createPatch(pod *corev1.Pod, inj *config.InjectionConfig, annotations map[s
 	patch = append(patch, addHostAliases(pod.Spec.HostAliases, inj.HostAliases, "/spec/hostAliases")...)
 	patch = append(patch, addVolumes(pod.Spec.Volumes, inj.Volumes, "/spec/volumes")...)
 
-	// last but not least, set annotations
+	// last but not least, set annotations and labels
 	patch = append(patch, updateAnnotations(pod.Annotations, annotations)...)
+	patch = append(patch, updateLabels(pod.Labels, inj.Labels)...)
 	return json.Marshal(patch)
 }
 
