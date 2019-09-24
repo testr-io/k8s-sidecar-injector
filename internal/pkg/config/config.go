@@ -28,14 +28,16 @@ var (
 
 // InjectionConfig is a specific instance of a injected config, for a given annotation
 type InjectionConfig struct {
-	Name           string               `json:"name"`
-	Containers     []corev1.Container   `json:"containers"`
-	Volumes        []corev1.Volume      `json:"volumes"`
-	Environment    []corev1.EnvVar      `json:"env"`
-	VolumeMounts   []corev1.VolumeMount `json:"volumeMounts"`
-	HostAliases    []corev1.HostAlias   `json:"hostAliases"`
-	InitContainers []corev1.Container   `json:"initContainers"`
-	Labels         map[string]string    `json:"labels"`
+	Name                  string               `json:"name"`
+	Containers            []corev1.Container   `json:"containers"`
+	Volumes               []corev1.Volume      `json:"volumes"`
+	Environment           []corev1.EnvVar      `json:"env"`
+	VolumeMounts          []corev1.VolumeMount `json:"volumeMounts"`
+	HostAliases           []corev1.HostAlias   `json:"hostAliases"`
+	InitContainers        []corev1.Container   `json:"initContainers"`
+	Labels                map[string]string    `json:"labels"`
+	EnvConfigMap          string               `json:"envConfigMap"`
+	EnvConfigMapNamespace string               `json:"envConfigMapNamespace"`
 }
 
 // Config is a struct indicating how a given injection should be configured
