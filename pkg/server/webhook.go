@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"k8s.io/client-go/kubernetes"
 	"net/http"
 	"strconv"
 	"strings"
@@ -18,6 +19,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/client-go/rest"
 )
 
 const (
@@ -418,6 +420,34 @@ func updateLabels(target map[string]string, added map[string]string) (patch []pa
 	return patch
 }
 
+func getEnvVarsFromConfigMap(configMapName string, namespace string) []corev1.EnvVar {
+	var envVars []corev1.EnvVar
+
+	k8sConfig, err := rest.InClusterConfig()
+	if err != nil {
+		glog.Errorf("Error initializing k8s api client: %s", err)
+		return nil
+	}
+	clientset, err := kubernetes.NewForConfig(k8sConfig)
+	if err != nil {
+		glog.Errorf("Error initializing k8s api client: %s", err)
+		return nil
+	}
+
+	client := clientset.CoreV1()
+	configMap, err := client.ConfigMaps(namespace).Get(configMapName, metav1.GetOptions{})
+	if err != nil {
+		glog.Errorf("Error finding configmap %s: %s", configMapName, err)
+		return nil
+	}
+
+	for key, value := range configMap.Data {
+		envVars = append(envVars, corev1.EnvVar{Name: strings.ToUpper(key), Value: value})
+	}
+
+	return envVars
+}
+
 // create mutation patch for resoures
 func createPatch(pod *corev1.Pod, inj *config.InjectionConfig, annotations map[string]string) ([]byte, error) {
 	var patch []patchOperation
@@ -492,8 +522,12 @@ func (whsvr *WebhookServer) mutate(req *v1beta1.AdmissionRequest) *v1beta1.Admis
 	envVar := new(corev1.EnvVar)
 	envVar.Name = "APP_PORTS"
 	envVar.Value = strings.Join(containerPorts, ",")
-
 	injectionConfig.Environment = append(injectionConfig.Environment, *envVar)
+
+	if injectionConfig.EnvConfigMap != "" {
+		envVarsFromConfigMap := getEnvVarsFromConfigMap(injectionConfig.EnvConfigMap, injectionConfig.EnvConfigMapNamespace)
+		injectionConfig.Environment = append(injectionConfig.Environment, envVarsFromConfigMap...)
+	}
 
 	// Workaround: https://github.com/kubernetes/kubernetes/issues/57982
 	applyDefaultsWorkaround(injectionConfig.Containers, injectionConfig.Volumes)
