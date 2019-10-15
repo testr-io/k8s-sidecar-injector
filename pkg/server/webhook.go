@@ -422,14 +422,24 @@ func updateLabels(target map[string]string, added map[string]string) (patch []pa
 func createPatch(pod *corev1.Pod, inj *config.InjectionConfig, annotations map[string]string) ([]byte, error) {
 	var patch []patchOperation
 
+	containerPorts := extractContainerPortsFromPod(*pod)
+	envVar := new(corev1.EnvVar)
+	envVar.Name = "APP_PORTS"
+	envVar.Value = strings.Join(containerPorts, ",")
+
+	//injectionConfig.Environment = append(injectionConfig.Environment, *envVar)
+	var envVarsToInject = make([]corev1.EnvVar, len(inj.Environment)+1)
+	copy(inj.Environment, envVarsToInject)
+	envVarsToInject[len(envVarsToInject)-1] = *envVar
+
 	// first, make sure any injected containers in our config get the EnvVars and VolumeMounts injected
 	// this mutates inj.Containers with our environment vars
-	mutatedInjectedContainers := mergeEnvVars(inj.Environment, inj.Containers)
+	mutatedInjectedContainers := mergeEnvVars(envVarsToInject, inj.Containers)
 	mutatedInjectedContainers = mergeVolumeMounts(inj.VolumeMounts, mutatedInjectedContainers)
 
 	// next, make sure any injected init containers in our config get the EnvVars and VolumeMounts injected
 	// this mutates inj.InitContainers with our environment vars
-	mutatedInjectedInitContainers := mergeEnvVars(inj.Environment, inj.InitContainers)
+	mutatedInjectedInitContainers := mergeEnvVars(envVarsToInject, inj.InitContainers)
 	mutatedInjectedInitContainers = mergeVolumeMounts(inj.VolumeMounts, mutatedInjectedInitContainers)
 
 	// next, patch containers with our injected containers
@@ -487,13 +497,6 @@ func (whsvr *WebhookServer) mutate(req *v1beta1.AdmissionRequest) *v1beta1.Admis
 			Allowed: true,
 		}
 	}
-
-	containerPorts := extractContainerPortsFromPod(pod)
-	envVar := new(corev1.EnvVar)
-	envVar.Name = "APP_PORTS"
-	envVar.Value = strings.Join(containerPorts, ",")
-
-	injectionConfig.Environment = append(injectionConfig.Environment, *envVar)
 
 	// Workaround: https://github.com/kubernetes/kubernetes/issues/57982
 	applyDefaultsWorkaround(injectionConfig.Containers, injectionConfig.Volumes)
