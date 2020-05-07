@@ -19,4 +19,5 @@ exec k8s-sidecar-injector \
   --tls-key-file="${TLS_KEY_FILE}" \
   --configmap-labels="${CONFIGMAP_LABELS}" \
   --configmap-namespace="${CONFIGMAP_NAMESPACE}" \
+  --annotation-namespace="${ANNOTATION_NAMESPACE}" \
   "$@"
