@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"path"
-	"path"
+	"strconv"
 	"strings"
 
 	"github.com/golang/glog"
@@ -475,6 +475,11 @@ func createPatch(pod *corev1.Pod, inj *config.InjectionConfig, annotations map[s
 	envVar := new(corev1.EnvVar)
 	envVar.Name = "APP_PORTS"
 	envVar.Value = strings.Join(containerPorts, ",")
+
+	//injectionConfig.Environment = append(injectionConfig.Environment, *envVar)
+	var envVarsToInject = make([]corev1.EnvVar, len(inj.Environment)+1)
+	copy(inj.Environment, envVarsToInject)
+	envVarsToInject[len(envVarsToInject)-1] = *envVar
 	
 	// be sure to inject the serviceAccountName before adding any volumeMounts, because we must prune out any existing
 	// volumeMounts that were added to support the default service account. Because this removal is by index, we splice
@@ -612,7 +617,7 @@ func (whsvr *WebhookServer) MutateHandler() http.Handler {
 }
 
 func (whsvr *WebhookServer) healthHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "d|-_-|b �"))
+	fmt.Fprintf(w, "d|-_-|b 🦄")
 }
 
 func (whsvr *WebhookServer) mutateHandler(w http.ResponseWriter, r *http.Request) {

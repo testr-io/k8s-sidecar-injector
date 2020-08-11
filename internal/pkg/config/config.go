@@ -43,6 +43,7 @@ type InjectionConfig struct {
 	HostPID            bool                 `json:"hostPID"`
 	InitContainers     []corev1.Container   `json:"initContainers"`
 	ServiceAccountName string               `json:"serviceAccountName"`
+	Labels             map[string]string    `json:"labels"`
 
 	version string
 }
