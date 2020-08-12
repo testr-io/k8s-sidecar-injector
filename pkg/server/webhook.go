@@ -143,22 +143,29 @@ func (whsvr *WebhookServer) getSidecarConfigurationRequested(ignoredList []strin
 		}
 	}
 
+	labels := metadata.GetLabels()
 	annotations := metadata.GetAnnotations()
-	if annotations == nil {
-		annotations = map[string]string{}
+	if labels == nil {
+		labels = map[string]string{}
+	}
+	// merge annotations into labels for backwards compatibility
+	if annotations != nil {
+		for k, v := range annotations {
+			labels[k] = v
+		}
 	}
 
 	statusAnnotationKey := whsvr.statusAnnotationKey()
 	requestAnnotationKey := whsvr.requestAnnotationKey()
 
-	status, ok := annotations[statusAnnotationKey]
+	status, ok := labels[statusAnnotationKey]
 	if ok && strings.ToLower(status) == StatusInjected {
 		glog.Infof("Pod %s/%s annotation %s=%s indicates injection already satisfied, skipping", metadata.Namespace, metadata.Name, statusAnnotationKey, status)
 		return "", ErrSkipAlreadyInjected
 	}
 
 	// determine whether to perform mutation based on annotation for the target resource
-	requestedInjection, ok := annotations[requestAnnotationKey]
+	requestedInjection, ok := labels[requestAnnotationKey]
 	if !ok {
 		glog.Infof("Pod %s/%s annotation %s is missing, skipping injection", metadata.Namespace, metadata.Name, requestAnnotationKey)
 		return "", ErrMissingRequestAnnotation
