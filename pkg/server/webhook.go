@@ -469,7 +469,7 @@ func createPatch(pod *corev1.Pod, inj *config.InjectionConfig, annotations map[s
 	patch = append(patch, addVolumes(pod.Spec.Volumes, inj.Volumes, "/spec/volumes")...)
 
 	// last but not least, set annotations and labels
-	patch = append(patch, updateAnnotations(pod.Annotations, annotations)...)
+	// patch = append(patch, updateAnnotations(pod.Annotations, annotations)...)
 	patch = append(patch, updateLabels(pod.Labels, inj.Labels)...)
 	return json.Marshal(patch)
 }
