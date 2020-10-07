@@ -1,6 +1,7 @@
 package config
 
 import (
+	"container/list"
 	"crypto/sha256"
 	"fmt"
 	"io"
@@ -36,6 +37,15 @@ type InjectionConfig struct {
 	HostAliases    []corev1.HostAlias   `json:"hostAliases"`
 	InitContainers []corev1.Container   `json:"initContainers"`
 	Labels         map[string]string    `json:"labels"`
+
+	Services    map[string]*ServiceDetails `json:"services"`
+	InjectAll   bool                       `json:"injectAll"`
+	InjectLabel bool                       `json:"injectLabel"`
+}
+
+type ServiceDetails struct {
+	Namespace string            `json:"namepsace"`
+	Selector  map[string]string `json:"selector"`
 }
 
 // Config is a struct indicating how a given injection should be configured

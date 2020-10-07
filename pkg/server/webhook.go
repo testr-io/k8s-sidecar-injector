@@ -22,7 +22,9 @@ import (
 
 const (
 	// StatusInjected is the annotation value for /status that indicates an injection was already performed on this pod
-	StatusInjected = "injected"
+	StatusInjected            = "injected"
+	DefaultSideCarKey         = "up9-sidecar-passive"
+	InjectionConfigurationKey = "up9-injector-config"
 )
 
 var (
@@ -145,6 +147,7 @@ func (whsvr *WebhookServer) getSidecarConfigurationRequested(ignoredList []strin
 
 	labels := metadata.GetLabels()
 	annotations := metadata.GetAnnotations()
+
 	if labels == nil {
 		labels = map[string]string{}
 	}
@@ -164,20 +167,63 @@ func (whsvr *WebhookServer) getSidecarConfigurationRequested(ignoredList []strin
 		return "", ErrSkipAlreadyInjected
 	}
 
-	// determine whether to perform mutation based on annotation for the target resource
-	requestedInjection, ok := labels[requestAnnotationKey]
-	if !ok {
-		glog.Infof("Pod %s/%s annotation %s is missing, skipping injection", metadata.Namespace, metadata.Name, requestAnnotationKey)
-		return "", ErrMissingRequestAnnotation
-	}
-	injectionKey := strings.ToLower(requestedInjection)
-	if !whsvr.Config.HasInjectionConfig(requestedInjection) {
-		glog.Errorf("Mutation policy for pod %s/%s: requested injection %s was not in configuration, skipping", metadata.Namespace, metadata.Name, requestedInjection)
-		return requestedInjection, ErrRequestedSidecarNotFound
-	}
+	// Check if the configuration is all pods
+	// Check if this is a pod of one of the selected deployments
+	// Last option is to check the label (backwards compatibility)
+	shouldInject, injectionKey := checkIfShouldInject(whsvr.Config, labels, metadata.Namespace, requestAnnotationKey)
 
-	glog.Infof("Pod %s/%s annotation %s=%s requesting sidecar config %s", metadata.Namespace, metadata.Name, requestAnnotationKey, requestedInjection, injectionKey)
-	return injectionKey, nil
+	if shouldInject {
+		//Check if override by annotation
+		requestedInjection, ok := labels[requestAnnotationKey]
+		if ok {
+			injectionKey = requestedInjection
+		}
+
+		if !whsvr.Config.HasInjectionConfig(injectionKey) {
+			glog.Errorf("Mutation policy for pod %s/%s: requested injection %s was not in configuration, skipping", metadata.Namespace, metadata.Name, injectionKey)
+			return injectionKey, ErrRequestedSidecarNotFound
+		}
+		glog.Infof("Pod %s/%s label %s=%s requesting sidecar config %s", metadata.Namespace, metadata.Name, requestAnnotationKey, injectionKey, injectionKey)
+		return injectionKey, nil
+	} else {
+		return "", ErrSkipByConfiguration
+	}
+}
+
+func checkIfShouldInject(configObj *config.Config, labels map[string]string, namespace string, requestAnnotationKey string) (bool, string) {
+	injectionConfig, err := configObj.GetInjectionConfig(InjectionConfigurationKey)
+	if err == nil {
+		if injectionConfig.InjectAll {
+			return true, DefaultSideCarKey
+		}
+
+		for _, service := range injectionConfig.Services {
+			matchSelector := true
+			for selectorKey, selectorValue := range service.Selector {
+				value, ok := labels[selectorKey]
+				if !ok || value != selectorValue {
+					matchSelector = false
+					break
+				}
+			}
+			if matchSelector && namespace == service.Namespace {
+				return true, DefaultSideCarKey
+			}
+		}
+
+		if injectionConfig.InjectLabel {
+			requestedInjection, ok := labels[requestAnnotationKey]
+			if ok {
+				return true, requestedInjection
+			}
+		}
+	}
+	// when we don't have configuration we go to the old way and check the label
+	requestedInjection, ok := labels[requestAnnotationKey]
+	if ok {
+		return true, requestedInjection
+	}
+	return false, ""
 }
 
 func setEnvironment(target []corev1.Container, addedEnv []corev1.EnvVar) (patch []patchOperation) {
