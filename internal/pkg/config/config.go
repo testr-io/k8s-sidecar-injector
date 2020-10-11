@@ -1,7 +1,6 @@
 package config
 
 import (
-	"container/list"
 	"crypto/sha256"
 	"fmt"
 	"io"
@@ -38,9 +37,9 @@ type InjectionConfig struct {
 	InitContainers []corev1.Container   `json:"initContainers"`
 	Labels         map[string]string    `json:"labels"`
 
-	Services    map[string]*ServiceDetails `json:"services"`
-	InjectAll   bool                       `json:"injectAll"`
-	InjectLabel bool                       `json:"injectLabel"`
+	Services    []*ServiceDetails `json:"services"`
+	InjectAll   bool              `json:"injectAll"`
+	InjectLabel bool              `json:"injectLabel"`
 }
 
 type ServiceDetails struct {
