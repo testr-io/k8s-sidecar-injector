@@ -162,12 +162,21 @@ func (whsvr *WebhookServer) getSidecarConfigurationRequested(namespace string, l
 		return "", ErrSkipAlreadyInjected
 	}
 
-	shouldInject, injectionKey := checkIfShouldInject(whsvr.Config, labels, namespace, requestAnnotationKey)
+	shouldInject := false
+	injectionKey := ""
+
+	if injectionConfig, err := whsvr.Config.GetInjectionConfig(InjectionConfigurationKey); err != nil {
+		shouldInject, injectionKey = checkIfNeedInjectByConfig(injectionConfig, labels, namespace, requestAnnotationKey)
+	} else { // when we don't have configuration we go to the old way and check the label
+		if requestedInjection, ok := labels[requestAnnotationKey]; ok {
+			shouldInject = true
+			injectionKey = requestedInjection
+		}
+	}
 
 	if shouldInject {
 		//Check if override by label
-		requestedInjection, ok := labels[requestAnnotationKey]
-		if ok {
+		if requestedInjection, ok := labels[requestAnnotationKey]; ok {
 			injectionKey = requestedInjection
 		}
 
@@ -180,38 +189,30 @@ func (whsvr *WebhookServer) getSidecarConfigurationRequested(namespace string, l
 
 }
 
-func checkIfShouldInject(configObj *config.Config, labels map[string]string, namespace string, requestAnnotationKey string) (bool, string) {
-	injectionConfig, err := configObj.GetInjectionConfig(InjectionConfigurationKey)
-	if err == nil {
-		if injectionConfig.InjectAll {
+func checkIfNeedInjectByConfig(injectionConfig *config.InjectionConfig, labels map[string]string, namespace string, requestAnnotationKey string) (bool, string) {
+	if injectionConfig.InjectAll {
+		return true, DefaultSideCarKey
+	}
+
+	for _, service := range injectionConfig.Services {
+		matchSelector := true
+		for selectorKey, selectorValue := range service.Selector {
+			value, ok := labels[selectorKey]
+			if !ok || value != selectorValue {
+				matchSelector = false
+				break
+			}
+		}
+		if matchSelector && namespace == service.Namespace {
 			return true, DefaultSideCarKey
 		}
-
-		for _, service := range injectionConfig.Services {
-			matchSelector := true
-			for selectorKey, selectorValue := range service.Selector {
-				value, ok := labels[selectorKey]
-				if !ok || value != selectorValue {
-					matchSelector = false
-					break
-				}
-			}
-			if matchSelector && namespace == service.Namespace {
-				return true, DefaultSideCarKey
-			}
-		}
-
-		if injectionConfig.InjectLabel {
-			requestedInjection, ok := labels[requestAnnotationKey]
-			if ok {
-				return true, requestedInjection
-			}
-		}
 	}
-	// when we don't have configuration we go to the old way and check the label
-	requestedInjection, ok := labels[requestAnnotationKey]
-	if ok {
-		return true, requestedInjection
+
+	if injectionConfig.InjectLabel {
+		requestedInjection, ok := labels[requestAnnotationKey]
+		if ok {
+			return true, requestedInjection
+		}
 	}
 	return false, ""
 }
