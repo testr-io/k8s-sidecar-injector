@@ -137,6 +137,8 @@ func (whsvr *WebhookServer) requestAnnotationKey() string {
 
 // Check whether the target resoured need to be mutated
 func (whsvr *WebhookServer) getSidecarConfigurationRequested(ignoredList []string, metadata *metav1.ObjectMeta) (string, error) {
+
+	// TODO: !!!!! Namespace is empty for pod of deployment ?! !!!
 	// skip special kubernetes system namespaces
 	for _, namespace := range ignoredList {
 		if metadata.Namespace == namespace {
