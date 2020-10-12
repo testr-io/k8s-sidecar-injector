@@ -37,13 +37,13 @@ type InjectionConfig struct {
 	InitContainers []corev1.Container   `json:"initContainers"`
 	Labels         map[string]string    `json:"labels"`
 
-	Services    []ServiceDetails `json:"services"`
+	Services    []ServiceDetails  `json:"services"`
 	InjectAll   bool              `json:"injectAll"`
 	InjectLabel bool              `json:"injectLabel"`
 }
 
 type ServiceDetails struct {
-	Namespace string            `json:"namepsace"`
+	Namespace string            `json:"namespace"`
 	Selector  map[string]string `json:"selector"`
 }
 
