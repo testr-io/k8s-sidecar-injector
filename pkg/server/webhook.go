@@ -136,19 +136,13 @@ func (whsvr *WebhookServer) requestAnnotationKey() string {
 }
 
 // Check whether the target resoured need to be mutated
-func (whsvr *WebhookServer) getSidecarConfigurationRequested(ignoredList []string, metadata *metav1.ObjectMeta) (string, error) {
+func (whsvr *WebhookServer) getSidecarConfigurationRequested(namespace string, labels map[string]string, annotations map[string]string) (string, error) {
 
-	// TODO: !!!!! Namespace is empty for pod of deployment ?! !!!
-	// skip special kubernetes system namespaces
-	for _, namespace := range ignoredList {
-		if metadata.Namespace == namespace {
-			glog.Infof("Pod %s/%s should skip injection due to ignored namespace", metadata.Name, metadata.Namespace)
+	for _, ignored := range ignoredNamespaces {
+		if namespace == ignored {
 			return "", ErrSkipIgnoredNamespace
 		}
 	}
-
-	labels := metadata.GetLabels()
-	annotations := metadata.GetAnnotations()
 
 	if labels == nil {
 		labels = map[string]string{}
@@ -165,31 +159,25 @@ func (whsvr *WebhookServer) getSidecarConfigurationRequested(ignoredList []strin
 
 	status, ok := labels[statusAnnotationKey]
 	if ok && strings.ToLower(status) == StatusInjected {
-		glog.Infof("Pod %s/%s annotation %s=%s indicates injection already satisfied, skipping", metadata.Namespace, metadata.Name, statusAnnotationKey, status)
 		return "", ErrSkipAlreadyInjected
 	}
 
-	// Check if the configuration is all pods
-	// Check if this is a pod of one of the selected deployments
-	// Last option is to check the label (backwards compatibility)
-	shouldInject, injectionKey := checkIfShouldInject(whsvr.Config, labels, metadata.Namespace, requestAnnotationKey)
+	shouldInject, injectionKey := checkIfShouldInject(whsvr.Config, labels, namespace, requestAnnotationKey)
 
 	if shouldInject {
-		//Check if override by annotation
+		//Check if override by label
 		requestedInjection, ok := labels[requestAnnotationKey]
 		if ok {
 			injectionKey = requestedInjection
 		}
 
 		if !whsvr.Config.HasInjectionConfig(injectionKey) {
-			glog.Errorf("Mutation policy for pod %s/%s: requested injection %s was not in configuration, skipping", metadata.Namespace, metadata.Name, injectionKey)
 			return injectionKey, ErrRequestedSidecarNotFound
 		}
-		glog.Infof("Pod %s/%s label %s=%s requesting sidecar config %s", metadata.Namespace, metadata.Name, requestAnnotationKey, injectionKey, injectionKey)
 		return injectionKey, nil
-	} else {
-		return "", ErrSkipByConfiguration
 	}
+	return "", ErrSkipByConfiguration
+
 }
 
 func checkIfShouldInject(configObj *config.Config, labels map[string]string, namespace string, requestAnnotationKey string) (bool, string) {
@@ -536,13 +524,15 @@ func (whsvr *WebhookServer) mutate(req *v1beta1.AdmissionRequest) *v1beta1.Admis
 		}
 	}
 
-	glog.Infof("AdmissionReview for Kind=%s, Namespace=%s Name=%s (%s) UID=%s patchOperation=%s UserInfo=%s",
-		req.Kind, req.Namespace, req.Name, pod.Name, req.UID, req.Operation, req.UserInfo)
+	glog.Infof("AdmissionReview for Kind=%s, Namespace=%s Name=%s (%s) UID=%s patchOperation=%s UserInfo=%s", req.Kind, req.Namespace, req.Name, pod.Name, req.UID, req.Operation, req.UserInfo)
+
+	namespace := req.Namespace // Taking namespace from pod because of: https://github.com/tumblr/k8s-sidecar-injector/issues/52
+	metadata := &pod.ObjectMeta
 
 	// determine whether to perform mutation
-	injectionKey, err := whsvr.getSidecarConfigurationRequested(ignoredNamespaces, &pod.ObjectMeta)
+	injectionKey, err := whsvr.getSidecarConfigurationRequested(namespace, metadata.GetLabels(), metadata.GetAnnotations())
 	if err != nil {
-		glog.Infof("Skipping mutation of %s/%s: %v", pod.Namespace, pod.Name, err)
+		glog.Infof("Skipping mutation of %s/%s: %v", namespace, pod.Name, err)
 		reason := GetErrorReason(err)
 		injectionCounter.With(prometheus.Labels{"status": "skipped", "reason": reason, "requested": injectionKey}).Inc()
 		return &v1beta1.AdmissionResponse{
