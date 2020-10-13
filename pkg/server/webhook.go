@@ -165,7 +165,7 @@ func (whsvr *WebhookServer) getSidecarConfigurationRequested(namespace string, l
 	shouldInject := false
 	injectionKey := ""
 
-	if injectionConfig, err := whsvr.Config.GetInjectionConfig(InjectionConfigurationKey); err != nil {
+	if injectionConfig, err := whsvr.Config.GetInjectionConfig(InjectionConfigurationKey); err == nil {
 		shouldInject, injectionKey = checkIfNeedInjectByConfig(injectionConfig, labels, namespace, requestAnnotationKey)
 	} else { // when we don't have configuration we go to the old way and check the label
 		if requestedInjection, ok := labels[requestAnnotationKey]; ok {
@@ -190,9 +190,6 @@ func (whsvr *WebhookServer) getSidecarConfigurationRequested(namespace string, l
 }
 
 func checkIfNeedInjectByConfig(injectionConfig *config.InjectionConfig, labels map[string]string, namespace string, requestAnnotationKey string) (bool, string) {
-	if injectionConfig.InjectAll {
-		return true, DefaultSideCarKey
-	}
 
 	for _, service := range injectionConfig.Services {
 		matchSelector := true

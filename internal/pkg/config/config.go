@@ -38,7 +38,6 @@ type InjectionConfig struct {
 	Labels         map[string]string    `json:"labels"`
 
 	Services    []ServiceDetails  `json:"services"`
-	InjectAll   bool              `json:"injectAll"`
 	InjectLabel bool              `json:"injectLabel"`
 }
 
