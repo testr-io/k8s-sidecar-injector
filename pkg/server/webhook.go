@@ -524,7 +524,7 @@ func (whsvr *WebhookServer) mutate(req *v1beta1.AdmissionRequest) *v1beta1.Admis
 
 	glog.Infof("AdmissionReview for Kind=%s, Namespace=%s Name=%s (%s) UID=%s patchOperation=%s UserInfo=%s", req.Kind, req.Namespace, req.Name, pod.Name, req.UID, req.Operation, req.UserInfo)
 
-	namespace := req.Namespace // Taking namespace from pod because of: https://github.com/tumblr/k8s-sidecar-injector/issues/52
+	namespace := req.Namespace // Taking namespace from request because of: https://github.com/tumblr/k8s-sidecar-injector/issues/52
 	metadata := &pod.ObjectMeta
 
 	// determine whether to perform mutation
