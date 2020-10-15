@@ -36,6 +36,14 @@ type InjectionConfig struct {
 	HostAliases    []corev1.HostAlias   `json:"hostAliases"`
 	InitContainers []corev1.Container   `json:"initContainers"`
 	Labels         map[string]string    `json:"labels"`
+
+	Services    []ServiceDetails  `json:"services"`
+	InjectLabel bool              `json:"injectLabel"`
+}
+
+type ServiceDetails struct {
+	Namespace string            `json:"namespace"`
+	Selector  map[string]string `json:"selector"`
 }
 
 // Config is a struct indicating how a given injection should be configured

@@ -1,5 +1,7 @@
 module github.com/tumblr/k8s-sidecar-injector
 
+go 1.14
+
 require (
 	github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
@@ -33,7 +35,7 @@ require (
 	golang.org/x/time v0.0.0-20181108054448-85acf8d2951c // indirect
 	google.golang.org/appengine v1.3.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
-	gopkg.in/yaml.v2 v2.2.1
+	gopkg.in/yaml.v2 v2.2.1 // indirect
 	k8s.io/api v0.0.0-20181108192910-6560175f5b2d
 	k8s.io/apimachinery v0.0.0-20181108192626-90473842928c
 	k8s.io/client-go v9.0.0+incompatible

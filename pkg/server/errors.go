@@ -9,6 +9,8 @@ var (
 	ErrSkipIgnoredNamespace = fmt.Errorf("Skipping pod in ignored namespace")
 	// ErrSkipAlreadyInjected ...
 	ErrSkipAlreadyInjected = fmt.Errorf("Skipping pod that has already been injected")
+	//ErrSkipByConfiguration
+	ErrSkipByConfiguration = fmt.Errorf("Skipping pod due to injector configuraiton")
 	// ErrMissingRequestAnnotation ...
 	ErrMissingRequestAnnotation = fmt.Errorf("Missing injection request annotation")
 	// ErrRequestedSidecarNotFound ...
@@ -26,6 +28,8 @@ func GetErrorReason(err error) string {
 		reason = "already_injected"
 	case ErrMissingRequestAnnotation:
 		reason = "no_annotation"
+	case ErrSkipByConfiguration:
+		reason = "skip_by_config"
 	case ErrRequestedSidecarNotFound:
 		reason = "missing_config"
 	case nil:
