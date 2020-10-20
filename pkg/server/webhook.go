@@ -23,7 +23,9 @@ import (
 const (
 	// StatusInjected is the annotation value for /status that indicates an injection was already performed on this pod
 	StatusInjected            = "injected"
+	// DefaultSideCarKey is the default value
 	DefaultSideCarKey         = "up9-sidecar-passive"
+	// InjectionConfigurationKey is the name of the config map that contains configuration
 	InjectionConfigurationKey = "up9-injector-config"
 )
 
@@ -195,13 +197,13 @@ func checkIfNeedInjectByConfig(injectionConfig *config.InjectionConfig, labels m
 		}
 	}
 
+
 	if injectionConfig.InjectAll {
 		requestedInjection, ok := labels[requestAnnotationKey]
 		if ok {
 			return true, requestedInjection
-		} else {
-			return true, DefaultSideCarKey
 		}
+		return true, DefaultSideCarKey
 	}
 	if injectionConfig.InjectLabel {
 		requestedInjection, ok := labels[requestAnnotationKey]
@@ -501,7 +503,7 @@ func createPatch(pod *corev1.Pod, inj *config.InjectionConfig, annotations map[s
 	patch = append(patch, addVolumes(pod.Spec.Volumes, inj.Volumes, "/spec/volumes")...)
 
 	// last but not least, set annotations and labels
-	// patch = append(patch, updateAnnotations(pod.Annotations, annotations)...)
+	patch = append(patch, updateAnnotations(pod.Annotations, annotations)...)
 	patch = append(patch, updateLabels(pod.Labels, inj.Labels)...)
 	return json.Marshal(patch)
 }
@@ -557,9 +559,9 @@ func (whsvr *WebhookServer) mutate(req *v1beta1.AdmissionRequest) *v1beta1.Admis
 
 	// Workaround: https://github.com/kubernetes/kubernetes/issues/57982
 	applyDefaultsWorkaround(injectionConfig.Containers, injectionConfig.Volumes)
-	annotations := map[string]string{}
-	annotations[whsvr.statusAnnotationKey()] = StatusInjected
-	patchBytes, err := createPatch(&pod, injectionConfig, annotations)
+	newAnnotations := map[string]string{}
+	newAnnotations[whsvr.statusAnnotationKey()] = StatusInjected
+	patchBytes, err := createPatch(&pod, injectionConfig, newAnnotations)
 	if err != nil {
 		injectionCounter.With(prometheus.Labels{"status": "error", "reason": "patching_error", "requested": injectionKey}).Inc()
 		return &v1beta1.AdmissionResponse{

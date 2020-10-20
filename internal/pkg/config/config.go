@@ -42,6 +42,7 @@ type InjectionConfig struct {
 	InjectAll   bool              `json:"injectAll"`
 }
 
+// ServiceDetails is a specific instance of a service (selector with namespace)
 type ServiceDetails struct {
 	Namespace string            `json:"namespace"`
 	Selector  map[string]string `json:"selector"`
