@@ -39,6 +39,7 @@ type InjectionConfig struct {
 
 	Services    []ServiceDetails  `json:"services"`
 	InjectLabel bool              `json:"injectLabel"`
+	InjectAll   bool              `json:"injectAll"`
 }
 
 type ServiceDetails struct {

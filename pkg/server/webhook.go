@@ -144,20 +144,10 @@ func (whsvr *WebhookServer) getSidecarConfigurationRequested(namespace string, l
 		}
 	}
 
-	if labels == nil {
-		labels = map[string]string{}
-	}
-	// merge annotations into labels for backwards compatibility
-	if annotations != nil {
-		for k, v := range annotations {
-			labels[k] = v
-		}
-	}
-
 	statusAnnotationKey := whsvr.statusAnnotationKey()
 	requestAnnotationKey := whsvr.requestAnnotationKey()
 
-	status, ok := labels[statusAnnotationKey]
+	status, ok := annotations[statusAnnotationKey]
 	if ok && strings.ToLower(status) == StatusInjected {
 		return "", ErrSkipAlreadyInjected
 	}
@@ -205,6 +195,14 @@ func checkIfNeedInjectByConfig(injectionConfig *config.InjectionConfig, labels m
 		}
 	}
 
+	if injectionConfig.InjectAll {
+		requestedInjection, ok := labels[requestAnnotationKey]
+		if ok {
+			return true, requestedInjection
+		} else {
+			return true, DefaultSideCarKey
+		}
+	}
 	if injectionConfig.InjectLabel {
 		requestedInjection, ok := labels[requestAnnotationKey]
 		if ok {
@@ -527,8 +525,17 @@ func (whsvr *WebhookServer) mutate(req *v1beta1.AdmissionRequest) *v1beta1.Admis
 	namespace := req.Namespace // Taking namespace from request because of: https://github.com/tumblr/k8s-sidecar-injector/issues/52
 	metadata := &pod.ObjectMeta
 
+	labels := metadata.GetLabels()
+	if labels == nil {
+		labels = map[string]string{}
+	}
+	annotations := metadata.GetAnnotations()
+	if annotations == nil {
+		annotations = map[string]string{}
+	}
+
 	// determine whether to perform mutation
-	injectionKey, err := whsvr.getSidecarConfigurationRequested(namespace, metadata.GetLabels(), metadata.GetAnnotations())
+	injectionKey, err := whsvr.getSidecarConfigurationRequested(namespace, labels ,annotations)
 	if err != nil {
 		glog.Infof("Skipping mutation of %s/%s: %v", namespace, pod.Name, err)
 		reason := GetErrorReason(err)
