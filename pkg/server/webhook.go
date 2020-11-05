@@ -27,6 +27,8 @@ const (
 	DefaultSideCarKey         = "up9-sidecar-passive"
 	// InjectionConfigurationKey is the name of the config map that contains configuration
 	InjectionConfigurationKey = "up9-injector-config"
+	// UP9Namespace is the name of up9 namespace to ignore injecting to this ns
+	UP9Namespace = "up9"
 )
 
 var (
@@ -84,6 +86,7 @@ var (
 var ignoredNamespaces = []string{
 	metav1.NamespaceSystem,
 	metav1.NamespacePublic,
+	UP9Namespace,
 }
 
 // WebhookServer is a server that handles mutating admission webhooks
