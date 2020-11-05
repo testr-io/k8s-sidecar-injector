@@ -1,0 +1,19 @@
+language: minimal
+branches:
+  only:
+  - develop
+  - master
+git:
+  depth: false
+services:
+- docker
+install:
+- PROJECT_NAME=sidecar-injector
+- echo "Extracting scripts from git..." && CURRENT_DIR=$(pwd) && cd .. && git clone -q git@github.com:up9inc/env-config.git && cd env-config && cd $CURRENT_DIR
+script:
+- "../env-config/devops/ci/authenticate_gcr.sh"
+- travis_fold start "docker_build" && ../env-config/devops/ci/build_docker_public_push.sh ${PROJECT_NAME} ${TRAVIS_PULL_REQUEST} && travis_fold end "docker_build"
+notifications:
+  slack:
+    if: type != pull_request
+    secure: VbHYbcKBXMPV0qQFgbIfevvR1Vow5M9iC6ypyHiJozUh3cbHgeypfQ7W6HEPbtJbR/qi8I+4+xcfl+e3XmLX19SDc8VohNPqtwxYJGAs5pR/fuRjXFVtNZUicc0fUOfpqOeWuX2frNEWoaCOTmaRVUNpiUZgQ/D0YHhTJ8wlvYEcxz+ny7zlDYbQMzbFq+y/3i0HGj566ou2cGvKBPBfk56mrOOEGJcD6H2JZ4l1AFTJ4uFBPIkn5+QIsfj85hBY0Xk0dnndfC/9Jc8Eb53H2nEm/JirVUDqcofJ0eULBvGq6lLBIsxkrILpuO97B+4pdNG9TSwD7mgEYAYMsEwEF1XuDsCC20GCs82nsi6RbvPSufKqXnO5H00ZTmI2Wg45669e0hCnJldCkzjR3JZpKsd2tAjVxVVNwdk8OPpdeI3tF4kW6vJfI74LTX8ZnMFCPEesA7mE90OCndnEBa59LMZZrINhn3jBR/Z2a3KAEPBgu0FljIaNFD0Q8TcCt9LwwkpUAfECB6CY4u9JN4o9ITH8LpGWvYah/iTZ9/yNWMwDrxzutCItApDUGL2NUx4U3JLX7cej3hoIzSxulyXP1Rj1MeHxdU3KXGWfgv1jltuqE6U2Q2Cz6itTCNB9tffizKJVtqbGMX+ftuUJyV3BGIu1+3xySLMo7lePmVhjplo=
